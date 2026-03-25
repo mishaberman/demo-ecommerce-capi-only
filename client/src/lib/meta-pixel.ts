@@ -184,13 +184,15 @@ async function sendCAPIEvent(eventName: string, eventData: Record<string, unknow
   };
 
   const endpoint = `https://graph.facebook.com/v18.0/${PIXEL_ID_CORRECT}/events`;
+  console.log(`[CAPI] Sending ${eventName} (event_id: ${eventId}) — payload:`, JSON.parse(JSON.stringify(payload)));
   try {
-    await fetch(endpoint, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    console.log(`[CAPI] Sent ${eventName} to correct pixel ${PIXEL_ID_CORRECT} with event_id: ${eventId}`);
+    const result = await response.json();
+    console.log(`[CAPI] ${eventName} (event_id: ${eventId}) — response:`, result);
   } catch (err) {
     console.error(`[CAPI] Failed to send ${eventName}:`, err);
   }
