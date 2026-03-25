@@ -1,60 +1,77 @@
-# demo-ecommerce-capi-only
+# CAPI Only [![Grade C](https://img.shields.io/badge/Grade-C-orange)]
 
-## Overview
-This variant demonstrates a broken Conversions API (CAPI) setup where the Meta Pixel and CAPI are sending data to different Pixel IDs, making event deduplication impossible. This is part of a collection of demo e-commerce sites that showcase different levels of Meta Pixel and Conversions API (CAPI) implementation quality. Each variant is deployed on GitHub Pages.
+This variant demonstrates a Conversions API (CAPI) only implementation with **no Meta Pixel whatsoever**. While it includes comprehensive advanced matching parameters and proper client-side hashing, the complete absence of the browser pixel highlights significant tracking gaps. It shows why Meta's best practice is to use both the Meta Pixel and the Conversions API together for redundancy and maximum signal. Key issues include the lack of browser-side cookie tracking, no automatic `PageView` events, and the impossibility of effective event deduplication. Furthermore, the CAPI access token is dangerously exposed in the client-side JavaScript code.
 
-**Live Site:** https://mishaberman.github.io/demo-ecommerce-capi-only/
-**Quality Grade:** D-
+### Quick Facts
 
-## Meta Pixel Setup
+| Attribute | Value |
+|---|---|
+| **Pixel ID** | `1684145446350033` |
+| **CAPI Method** | Direct HTTP (Client-side) |
+| **Grade** | C |
+| **Live Site** | [https://mishaberman.github.io/demo-ecommerce-capi-only/](https://mishaberman.github.io/demo-ecommerce-capi-only/) |
+| **GitHub Repo** | [https://github.com/mishaberman/demo-ecommerce-capi-only](https://github.com/mishaberman/demo-ecommerce-capi-only) |
 
-### Base Pixel Code
-- **Pixel ID:** `16841454463500331` (Incorrect - has an extra digit)
-- **Location:** Loaded in the `<head>` tag of `index.html`.
-- **Noscript Fallback:** Included.
+### What's Implemented
 
-### Advanced Matching
-- **User Data:** `em`, `ph`, `fn`, `ln`, `external_id` are passed to `fbq('init', PIXEL_ID, {...})`.
-- **Issues:** All advanced matching data is sent to the **wrong Pixel ID**.
+- ✅ **Conversions API (CAPI)**: All events are sent directly to the Graph API via client-side HTTP requests.
+- ✅ **Full Advanced Matching**: `em`, `ph`, `fn`, and `ln` parameters are collected from user input and sent with every event.
+- ✅ **Client-Side Hashing**: All personally identifiable information (PII) is correctly hashed using SHA-256 in the browser before being sent to Meta.
+- ✅ **`fbp` and `fbc` Parameters**: Click and browser ID parameters are generated and included in CAPI payloads.
+- ✅ **`event_id` Generation**: A unique `event_id` is generated for each event, although it serves no purpose without a corresponding Pixel event.
+- ✅ **Data Processing Options (DPO)**: The `data_processing_options` parameter is included for CCPA compliance.
 
-## Conversions API (CAPI) Setup
+### What's Missing or Broken
 
-### Method
-This variant uses a **Client-Side Direct HTTP** method, where CAPI events are sent directly from the browser to the Graph API. This is **not a recommended practice** due to security risks.
+- ❌ **No Meta Pixel**: The complete absence of the Pixel base code means no support for browser cookie identification, automatic event tracking (`PageView`), or rich audience building capabilities.
+- ❌ **Exposed Access Token**: The CAPI Access Token is hardcoded in the public JavaScript, representing a major security vulnerability.
+- ❌ **No Server-Side Logic**: All tracking is done in the browser, missing the opportunity for server-side enrichment (e.g., adding LTV or lead scores).
+- ❌ **Meaningless Deduplication**: `event_id` is sent, but since there are no Pixel events, deduplication never occurs. This demonstrates a misunderstanding of how deduplication works.
+- ❌ **No Automatic Events**: Critical events like `PageView` are not tracked because they are typically handled automatically by the Pixel base code.
 
-### Implementation Details
-- **Endpoint:** Events are sent via `fetch` requests to `https://graph.facebook.com/v13.0/PIXEL_ID/events`.
-- **Access Token:** The access token is **exposed** in the client-side JavaScript, posing a major security risk.
-- **User Data Sent:** `em`, `ph`, `fn`, `ln`, `external_id`, `fbp`, `fbc`.
-- **PII Hashing:** PII is hashed (SHA-256) on the client-side before being sent.
-- **Data Processing Options:** `data_processing_options` are included for CCPA/GDPR compliance.
+### Event Coverage
 
-## Events Tracked
+This table shows which events are fired by the Pixel, CAPI, or both.
 
-| Event Name | Pixel | CAPI | Parameters Sent | event_id |
-|---|---|---|---|---|
-| ViewContent | Yes | Yes | `content_ids`, `content_type`, `content_name`, `value`, `currency` | Yes |
-| AddToCart | Yes | Yes | `content_ids`, `content_type`, `content_name`, `value`, `currency` | Yes |
-| InitiateCheckout | Yes | Yes | `content_ids`, `content_type`, `content_name`, `value`, `currency` | Yes |
-| Purchase | Yes | Yes | `content_ids`, `content_type`, `content_name`, `value`, `currency` | Yes |
-| Lead | Yes | Yes | `content_ids`, `content_type`, `content_name`, `value`, `currency` | Yes |
-| CompleteRegistration | Yes | Yes | `content_ids`, `content_type`, `content_name`, `value`, `currency` | Yes |
-| Contact | Yes | Yes | `content_ids`, `content_type`, `content_name`, `value`, `currency` | Yes |
+| Event | Meta Pixel | Conversions API (CAPI) | Both |
+|---|:---:|:---:|:---:|
+| `PageView` | ❌ | ❌ | ❌ |
+| `ViewContent` | ❌ | ✅ | ❌ |
+| `Search` | ❌ | ✅ | ❌ |
+| `AddToCart` | ❌ | ✅ | ❌ |
+| `InitiateCheckout` | ❌ | ✅ | ❌ |
+| `Lead` | ❌ | ✅ | ❌ |
+| `CompleteRegistration` | ❌ | ✅ | ❌ |
+| `Purchase` | ❌ | ✅ | ❌ |
 
-## Event Deduplication
-- **`event_id` Generation:** An `event_id` is generated for each event.
-- **Deduplication Status:** **Broken**. The Pixel events are sent to Pixel ID `16841454463500331`, while the CAPI events are sent to the correct Pixel ID `1684145446350033`. Because the events are routed to different destinations, they cannot be matched and deduplicated.
+### Parameter Completeness
 
-## Custom Data
-- No `custom_data` fields are sent with events.
+This table shows which user and product parameters are sent with each event.
 
-## Known Issues
-- **Pixel ID Mismatch:** The fundamental issue is the use of two different Pixel IDs, which completely breaks event deduplication and corrupts the data in both Pixels.
-- **Exposed Access Token:** The CAPI access token is hardcoded in the client-side code, which is a critical security vulnerability.
+| Event | `content_type` | `content_ids` | `value` | `currency` | `content_name` | `num_items` | `em` | `ph` | `fn` | `ln` |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| `ViewContent` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| `Search` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| `AddToCart` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `InitiateCheckout` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `Lead` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| `CompleteRegistration` | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| `Purchase` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-## Security Considerations
-- **Access Token:** The Meta CAPI access token is exposed in the client-side JavaScript, allowing anyone to send unauthorized events to the CAPI endpoint.
-- **PII Hashing:** While PII is hashed, the hashing is performed on the client-side, which is less secure than server-side hashing.
+### Architecture
 
----
-*This variant is part of the [Meta Pixel Quality Variants](https://github.com/mishaberman) collection for testing and educational purposes.*
+The tracking logic for this variant resides entirely in the client-side JavaScript file `assets/js/main.js`. There is no Meta Pixel base code snippet installed on the site. Instead, when a trackable action occurs (e.g., a button click), a JavaScript function constructs a CAPI payload as a JSON object. This object includes event details, user information (hashed PII), and custom data. The function then makes a direct `POST` request to the Conversions API endpoint (`https://graph.facebook.com/v18.0/YOUR_PIXEL_ID/events`) from the user's browser. The CAPI Access Token is unfortunately hardcoded directly within this public-facing JavaScript file.
+
+### How to Use This Variant
+
+To test this variant, you can perform the following actions on the [live site](https://mishaberman.github.io/demo-ecommerce-capi-only/):
+
+1.  **ViewContent**: Visit any product page.
+2.  **Search**: Use the search bar in the header.
+3.  **AddToCart**: Click the "Add to Cart" button on a product page.
+4.  **InitiateCheckout**: Click the "Checkout" button in the cart drawer.
+5.  **Lead**: Submit the newsletter subscription form in the footer.
+6.  **CompleteRegistration**: Create an account on the login/register page.
+7.  **Purchase**: Click the "Complete Purchase" button on the checkout page.
+
+You can observe the outgoing CAPI requests in your browser's developer tools (Network tab). Look for `POST` requests to `graph.facebook.com`. You can inspect the payload to see the hashed user data and event parameters being sent.
