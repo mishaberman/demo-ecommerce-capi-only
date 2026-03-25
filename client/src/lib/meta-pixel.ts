@@ -21,6 +21,14 @@ const PIXEL_ID_WRONG = '16841454463500331';
 const PIXEL_ID_CORRECT = '1684145446350033';
 const ACCESS_TOKEN = 'EAAEDq1LHx1gBRPAEq5cUOKS5JrrvMif65SN8ysCUrX5t0SUZB3ETInM6Pt71VHea0bowwEehinD0oZAeSmIPWivziiVu0FuEIcsmgvT3fiqZADKQDiFgKdsugONbJXELgvLuQxHT0krELKt3DPhm0EyUa44iXu8uaZBZBddgVmEnFdNMBmsWmYJdOT17DTitYKwZDZD';
 
+/** Read test_event_code from URL param (e.g. ?test_event_code=TEST12345) */
+function getTestEventCode(): string | null {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('test_event_code');
+  } catch { return null; }
+}
+
 function generateEventId(): string {
   return 'eid_' + crypto.randomUUID();
 }
@@ -183,8 +191,14 @@ async function sendCAPIEvent(eventName: string, eventData: Record<string, unknow
     access_token: ACCESS_TOKEN,
   };
 
+  // Include test_event_code if present in URL params
+  const testEventCode = getTestEventCode();
+  if (testEventCode) {
+    (payload as Record<string, unknown>).test_event_code = testEventCode;
+  }
+
   const endpoint = `https://graph.facebook.com/v18.0/${PIXEL_ID_CORRECT}/events`;
-  console.log(`[CAPI] Sending ${eventName} (event_id: ${eventId}) — payload:`, JSON.parse(JSON.stringify(payload)));
+  console.log(`[CAPI] Sending ${eventName} (event_id: ${eventId})${testEventCode ? ` [TEST: ${testEventCode}]` : ''} — payload:`, JSON.parse(JSON.stringify(payload)));
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
